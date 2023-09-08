@@ -1,3 +1,3 @@
 # Vue.js Training
 
-Vue.js training performed on the [platform](https://igorhalfeld.teachable.com/courses/enrolled/1283923)
+Vue.js training performed on the [treinamento.vuejsbrasil](https://treinamento.vuejsbrasil.org/)
