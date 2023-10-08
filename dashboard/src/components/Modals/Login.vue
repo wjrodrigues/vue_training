@@ -13,7 +13,7 @@
     <form @submit.prevent="handleSubmit">
       <label class="block">
         <span class="text-lg font-medium text-gray-800">E-mail</span>
-        <input v-model="state.email.value" type="text"
+        <input v-model="state.email.value" type="text" required
           class="block w-full px-4 py-3 mt-1 text-lg bg-gray-100 border-2 border-transparent rounded"
           :class="{ 'border-brand-danger': !!state.email.errorMessage }" placeholder="name@domain.com">
         <span v-if="!!state.email.errorMessage" class="block font-medium text-brand-danger">
@@ -23,7 +23,7 @@
 
       <label class="block mt-9">
         <span class="text-lg font-medium text-gray-800">Senha</span>
-        <input v-model="state.password.value" type="password"
+        <input v-model="state.password.value" type="password" required
           class="block w-full px-4 py-3 mt-1 text-lg bg-gray-100 border-2 border-transparent rounded"
           :class="{ 'border-brand-danger': !!state.password.errorMessage }">
         <span v-if="!!state.password.errorMessage" class="block font-medium text-brand-danger">
@@ -33,21 +33,31 @@
 
       <button
         class="px-8 py-3 mt-10 text-2xl font-bold text-white rounded-full bg-brand-main focus:outline-none transition-all duration-150"
-        :disabled="state.isLoading" :class="{ 'opacity-50': state.isLoading }">Entrar</button>
+        :disabled="state.isLoading" :class="{ 'opacity-50': state.isLoading }" type="submit">
+        <icon v-if="state.isLoading" name="loading" class="animate-spin" />
+        <span v-else>Entrar</span>
+      </button>
     </form>
   </div>
 </template>
 
 <script>
 import { reactive } from 'vue';
+import { useRouter } from 'vue-router'
 import { useField } from 'vee-validate'
-import useModal from '../../hooks/useModal';
+import { useToast } from 'vue-toastification'
+import Icon from '../Icon/index.vue'
+import useModal from '../../hooks/useModal'
+import services from '../../services/index'
 import { validateEmptyAndLength3, validateEmptyAndEmail } from '../../utils/validators'
 
 export default {
   name: 'modal-login',
+  components: { Icon },
   setup() {
+    const router = useRouter()
     const modal = useModal()
+    const toast = useToast()
 
     const {
       value: emailValue,
@@ -72,8 +82,35 @@ export default {
       }
     })
 
-    function handleSubmit() {
+    async function handleSubmit() {
+      try {
+        toast.clear()
+        state.isLoading = true
 
+        const { data, error } = await services.auth.login({
+          email: state.email.value,
+          password: state.password.value
+        })
+
+        if (!error) {
+          state.isLoading = false
+          window.localStorage.setItem("token", data.token)
+          router.push({ name: 'Feedbacks' })
+          modal.close()
+          return
+        }
+
+        if (error.status == 404) { toast.error('E-mail não encontrado!') }
+        if (error.status == 401) { toast.error('E-mail/senha inválidos!') }
+        if (error.status == 400) { toast.error('Ocorreu um erro ao fazer o login!') }
+
+        state.isLoading = false
+      } catch (error) {
+        state.isLoading = false
+        state.hasErrors = !!error
+
+        toast.error('Ocorreu um erro ao fazer o login!')
+      }
     }
 
     return {
